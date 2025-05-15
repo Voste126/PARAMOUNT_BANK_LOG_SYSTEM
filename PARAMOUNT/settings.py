@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'Staff',
+    'ReportLog',
 ]
 
 MIDDLEWARE = [
