@@ -11,10 +11,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -37,6 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    #installed apps
+    'rest_framework',
+    'drf_yasg',
+    'Staff',
 ]
 
 MIDDLEWARE = [
@@ -116,6 +126,26 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Email settings for OTP
+# DEFAULT_FROM_EMAIL = 'noreply@paramount.com'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development/testing
+# For production, configure SMTP backend and credentials securely
+# EMAIL_HOST = 'smtp.yourprovider.com'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = 'youruser'
+# EMAIL_HOST_PASSWORD = 'yourpassword'
+# EMAIL_USE_TLS = True
+
+DEFAULT_FROM_EMAIL = 'noreply@paramount.com'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.yourprovider.com')
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'youruser')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'yourpassword')
+EMAIL_USE_TLS = True
+
+STAFF_EMAIL_DOMAIN = os.getenv('STAFF_EMAIL_DOMAIN', '@paramount.co.ke')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
