@@ -10,6 +10,8 @@ from .serializer import StaffRegisterSerializer, OTPVerifySerializer, OTPLoginSe
 import random
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import AllowAny
 
 login_request_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -29,6 +31,8 @@ login_verify_schema = openapi.Schema(
 )
 
 class StaffRegisterView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
     @swagger_auto_schema(request_body=StaffRegisterSerializer, responses={201: StaffSerializer})
     def post(self, request):
         serializer = StaffRegisterSerializer(data=request.data)
@@ -49,6 +53,8 @@ class StaffRegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OTPVerifyView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
     @swagger_auto_schema(request_body=OTPVerifySerializer, responses={200: 'Verified'})
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
@@ -69,6 +75,8 @@ class OTPVerifyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OTPLoginRequestView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
     @swagger_auto_schema(
         request_body=login_request_schema,
         responses={200: openapi.Response('OTP sent', schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={'message': openapi.Schema(type=openapi.TYPE_STRING)}))}
@@ -97,6 +105,8 @@ class OTPLoginRequestView(APIView):
         return Response({'message': 'OTP sent to email.'}, status=status.HTTP_200_OK)
 
 class OTPLoginVerifyView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
     @swagger_auto_schema(
         request_body=login_verify_schema,
         responses={200: StaffSerializer}
@@ -114,7 +124,13 @@ class OTPLoginVerifyView(APIView):
                 return Response({'error': 'OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
             staff.otp = None
             staff.save()
-            return Response(StaffSerializer(staff).data, status=status.HTTP_200_OK)
+            # Generate JWT token for the staff
+            refresh = RefreshToken.for_user(staff)
+            return Response({
+                'staff': StaffSerializer(staff).data,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token)
+            }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # For SSO, Django's authentication system can be integrated with a custom backend if needed.
