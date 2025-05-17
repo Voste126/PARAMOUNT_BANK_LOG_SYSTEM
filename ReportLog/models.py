@@ -34,7 +34,6 @@ class ITIssue(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
     date_logged = models.DateTimeField(auto_now_add=True)
-    assigned_to = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, related_name='assigned_issues')
     associated_file = models.FileField(upload_to='issue_files/', blank=True, null=True)
     resolution_date = models.DateTimeField(blank=True, null=True)
     work_done = models.TextField(blank=True, null=True)

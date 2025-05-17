@@ -2,14 +2,16 @@ from rest_framework import serializers
 from .models import ITIssue
 
 class ITIssueSerializer(serializers.ModelSerializer):
+    submitted_by = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = ITIssue
         fields = [
             'id', 'category', 'issue_title', 'issue_description', 'priority', 'status', 'date_logged',
-            'assigned_to', 'associated_file', 'resolution_date', 'work_done',
+            'associated_file', 'resolution_date', 'work_done',
             'recommendation', 'method_of_logging', 'submitted_by'
         ]
-        read_only_fields = ['status', 'date_logged', 'resolution_date', 'work_done', 'recommendation', 'assigned_to', 'submitted_by']
+        read_only_fields = ['status', 'date_logged', 'resolution_date', 'work_done', 'recommendation', 'submitted_by']
 
 class ITIssueCreateSerializer(serializers.ModelSerializer):
     associated_file = serializers.FileField(required=False, allow_null=True)
@@ -40,5 +42,12 @@ class ITIssueUpdateStatusSerializer(serializers.ModelSerializer):
         if instance.status == 'completed':
             from django.utils import timezone
             instance.resolution_date = timezone.now()
+        # Accept assigned_to and submitted_by from kwargs
+        assigned_to = self.context.get('assigned_to')
+        submitted_by = self.context.get('submitted_by')
+        if assigned_to:
+            instance.assigned_to = assigned_to
+        if submitted_by:
+            instance.submitted_by = submitted_by
         instance.save()
         return instance

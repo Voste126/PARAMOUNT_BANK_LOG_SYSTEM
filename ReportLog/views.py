@@ -65,5 +65,24 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return ITIssueSerializer
 
     def perform_update(self, serializer):
-        # Use custom update logic in serializer
-        serializer.save()
+        from Staff.models import Staff
+        user = self.request.user
+        try:
+            staff = Staff.objects.get(id=user.id)
+        except Staff.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(detail="User not found", code="user_not_found")
+        # Only set submitted_by now
+        instance = serializer.save(submitted_by=staff)
+        from .serializer import ITIssueSerializer
+        data = ITIssueSerializer(instance).data
+        if instance.submitted_by:
+            data['submitted_by'] = staff.id
+        self.full_details = data
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        # If full_details was set in perform_update, return it
+        if hasattr(self, 'full_details'):
+            response.data = self.full_details
+        return response
