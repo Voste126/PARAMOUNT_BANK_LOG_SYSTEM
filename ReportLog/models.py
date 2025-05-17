@@ -42,6 +42,11 @@ class ITIssue(models.Model):
     method_of_logging = models.CharField(max_length=10, choices=METHOD_CHOICES)
     submitted_by = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='submitted_issues')
 
+    """
+    Each Staff (user) can submit many ITIssue records via the 'submitted_by' ForeignKey.
+    Use related_name='submitted_issues' to access all issues submitted by a staff member.
+    """
+
     def save(self, *args, **kwargs):
         # Set resolution_date automatically if status is completed and not already set
         if self.status == 'completed' and self.resolution_date is None:

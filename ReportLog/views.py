@@ -1,59 +1,69 @@
-from django.shortcuts import render
 from rest_framework import generics, permissions
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.exceptions import PermissionDenied
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import ITIssue
-from .serializer import ITIssueSerializer, ITIssueCreateSerializer, ITIssuePatchSerializer
-from Staff.models import Staff
+from .serializer import ITIssueSerializer, ITIssueCreateSerializer, ITIssueUpdateStatusSerializer
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.exceptions import NotAuthenticated
 
-# A staff who has a JWT access token hence authenticated can create an issue in the API
-class ITIssueCreateView(generics.CreateAPIView):
-    queryset = ITIssue.objects.all()
-    serializer_class = ITIssueCreateSerializer
-    parser_classes = (JSONParser, MultiPartParser, FormParser)
-    authentication_classes = [JWTAuthentication]
+class ITIssueListCreateView(generics.ListCreateAPIView):
+    serializer_class = ITIssueSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
+        # Short-circuit for schema generation (Swagger/OpenAPI)
+        if getattr(self, 'swagger_fake_view', False):
+            return ITIssue.objects.none()
         user = self.request.user
+        from Staff.models import Staff
         if not user or not user.is_authenticated:
-            return ITIssue.objects.none()
+            raise NotAuthenticated("Authentication credentials were not provided.")
         try:
-            staff_instance = Staff.objects.get(user=user)
+            staff = Staff.objects.get(id=user.id)
         except Staff.DoesNotExist:
-            return ITIssue.objects.none()
-        return ITIssue.objects.filter(submitted_by=staff_instance)
+            from rest_framework.exceptions import NotFound
+            raise NotFound(detail="User not found", code="user_not_found")
+        return ITIssue.objects.filter(submitted_by=staff)
 
-class ITIssuePatchView(generics.UpdateAPIView):
-    queryset = ITIssue.objects.all()
-    serializer_class = ITIssuePatchSerializer
-    parser_classes = (JSONParser, MultiPartParser, FormParser)
-    authentication_classes = [JWTAuthentication]
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ITIssueCreateSerializer
+        return ITIssueSerializer
+
+    def perform_create(self, serializer):
+        from Staff.models import Staff
+        user = self.request.user
+        try:
+            staff = Staff.objects.get(id=user.id)
+        except Staff.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(detail="User not found", code="user_not_found")
+        serializer.save(submitted_by=staff)
+
+class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ITIssueSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
+        # Short-circuit for schema generation (Swagger/OpenAPI)
+        if getattr(self, 'swagger_fake_view', False):
+            return ITIssue.objects.none()
         user = self.request.user
+        from Staff.models import Staff
         if not user or not user.is_authenticated:
-            return ITIssue.objects.none()
+            raise NotAuthenticated("Authentication credentials were not provided.")
         try:
-            staff_instance = Staff.objects.get(user=user)
+            staff = Staff.objects.get(id=user.id)
         except Staff.DoesNotExist:
-            return ITIssue.objects.none()
-        return ITIssue.objects.filter(submitted_by=staff_instance)
+            from rest_framework.exceptions import NotFound
+            raise NotFound(detail="User not found", code="user_not_found")
+        return ITIssue.objects.filter(submitted_by=staff)
 
-class ITIssueDeleteView(generics.DestroyAPIView):
-    queryset = ITIssue.objects.all()
-    parser_classes = (JSONParser, MultiPartParser, FormParser)
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return ITIssueUpdateStatusSerializer
+        return ITIssueSerializer
 
-    def get_queryset(self):
-        user = self.request.user
-        if not user or not user.is_authenticated:
-            return ITIssue.objects.none()
-        try:
-            staff_instance = Staff.objects.get(user=user)
-        except Staff.DoesNotExist:
-            return ITIssue.objects.none()
-        return ITIssue.objects.filter(submitted_by=staff_instance)
+    def perform_update(self, serializer):
+        # Use custom update logic in serializer
+        serializer.save()

@@ -1,8 +1,7 @@
 from django.urls import path
-from .views import ITIssueCreateView, ITIssuePatchView, ITIssueDeleteView
+from .views import ITIssueListCreateView, ITIssueRetrieveUpdateDestroyView
 
 urlpatterns = [
-    path('issues/', ITIssueCreateView.as_view(), name='issue-create'),
-    path('issues/<int:pk>/', ITIssuePatchView.as_view(), name='issue-patch'),
-    path('issues/<int:pk>/delete/', ITIssueDeleteView.as_view(), name='issue-delete'),
+    path('issues/', ITIssueListCreateView.as_view(), name='issue-list-create'),
+    path('issues/<int:pk>/', ITIssueRetrieveUpdateDestroyView.as_view(), name='issue-detail'),
 ]
