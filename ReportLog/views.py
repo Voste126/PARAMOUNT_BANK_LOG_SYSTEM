@@ -39,7 +39,32 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
         except Staff.DoesNotExist:
             from rest_framework.exceptions import NotFound
             raise NotFound(detail="User not found", code="user_not_found")
-        serializer.save(submitted_by=staff)
+        instance = serializer.save(submitted_by=staff)
+
+        # Send email notification to staff on successful issue log
+        staff_email = staff.email
+        if staff_email:
+            subject = f"IT Issue Successfully Logged: {instance.issue_title}"
+            message = (
+                f"Dear {staff.first_name} {staff.last_name},\n\n"
+                f"Your IT issue has been successfully logged in our system. Our IT team has been notified and will begin working on your request immediately. Please find the details of your logged issue below:\n\n"
+                f"Issue Title: {instance.issue_title}\n"
+                f"Category: {instance.category.replace('_', ' ').title()}\n"
+                f"Priority: {instance.priority}\n"
+                f"Date Logged: {instance.date_logged.strftime('%Y-%m-%d %H:%M:%S') if instance.date_logged else 'N/A'}\n\n"
+                f"Issue Description:\n{instance.issue_description}\n\n"
+                f"Method of Logging: {instance.method_of_logging.title()}\n\n"
+                f"Our IT support team will review your issue and keep you updated on the progress. If you have any further information to add, please reply to this email or contact the IT department directly.\n\n"
+                f"Thank you for bringing this to our attention.\n\n"
+                f"Best regards,\nIT Support Team\nParamount Bank"
+            )
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [staff_email],
+                fail_silently=True,
+            )
 
 class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ITIssueSerializer
