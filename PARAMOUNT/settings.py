@@ -147,6 +147,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'yourpassword')
 EMAIL_USE_TLS = True
 
 STAFF_EMAIL_DOMAIN = os.getenv('STAFF_EMAIL_DOMAIN', '@paramount.co.ke')
+IT_SUPPORT_EMAIL = os.getenv('IT_SUPPORT_EMAIL', 'steveaustine126@gmail.com')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

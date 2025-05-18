@@ -66,6 +66,30 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
                 fail_silently=True,
             )
 
+        # Send notification to IT support email with full details and staff name
+        it_support_email = getattr(settings, 'IT_SUPPORT_EMAIL', None)
+        if it_support_email:
+            it_subject = f"New IT Issue Logged by {staff.first_name} {staff.last_name}: {instance.issue_title}"
+            it_message = (
+                f"A new IT issue has been logged by {staff.first_name} {staff.last_name} ({staff.email}).\n\n"
+                f"Issue Details:\n"
+                f"Title: {instance.issue_title}\n"
+                f"Category: {instance.category.replace('_', ' ').title()}\n"
+                f"Priority: {instance.priority}\n"
+                f"Date Logged: {instance.date_logged.strftime('%Y-%m-%d %H:%M:%S') if instance.date_logged else 'N/A'}\n"
+                f"Method of Logging: {instance.method_of_logging.title()}\n\n"
+                f"Description:\n{instance.issue_description}\n\n"
+                f"Please review and assign this issue as soon as possible.\n\n"
+                f"--\nParamount Bank IT Issue Reporting System"
+            )
+            send_mail(
+                it_subject,
+                it_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [it_support_email],
+                fail_silently=True,
+            )
+
 class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ITIssueSerializer
     permission_classes = [permissions.IsAuthenticated]
