@@ -11,7 +11,8 @@ import random
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.template.loader import render_to_string
 
 login_request_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -42,12 +43,18 @@ class StaffRegisterView(APIView):
             staff.otp = otp
             staff.otp_created_at = timezone.now()
             staff.save()
+            html_message = render_to_string('emails/otp_register.html', {
+                'staff': staff,
+                'otp': otp,
+                'year': timezone.now().year
+            })
             send_mail(
                 'Your OTP Code',
-                f'Your OTP code is {otp}',
+                '',
                 settings.DEFAULT_FROM_EMAIL,
                 [staff.email],
                 fail_silently=False,
+                html_message=html_message
             )
             return Response({'message': 'Staff registered. OTP sent to email.'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -95,12 +102,18 @@ class OTPLoginRequestView(APIView):
         staff.otp = otp
         staff.otp_created_at = timezone.now()
         staff.save()
+        html_message = render_to_string('emails/otp_login.html', {
+            'staff': staff,
+            'otp': otp,
+            'year': timezone.now().year
+        })
         send_mail(
             'Your Login OTP',
-            f'Your login OTP is {otp}',
+            '',
             settings.DEFAULT_FROM_EMAIL,
             [staff.email],
             fail_silently=False,
+            html_message=html_message
         )
         return Response({'message': 'OTP sent to email.'}, status=status.HTTP_200_OK)
 
@@ -132,6 +145,20 @@ class OTPLoginVerifyView(APIView):
                 'access': str(refresh.access_token)
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class StaffListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Retrieve a list of all staff members.",
+        responses={200: StaffSerializer(many=True)},
+        tags=["Staff"]
+    )
+    def get(self, request):
+        """List all staff in the system."""
+        staff = Staff.objects.all()
+        serializer = StaffSerializer(staff, many=True)
+        return Response(serializer.data)
 
 # For SSO, Django's authentication system can be integrated with a custom backend if needed.
 # This implementation focuses on OTP-based authentication as requested.
