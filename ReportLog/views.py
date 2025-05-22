@@ -154,10 +154,10 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             data['submitted_by'] = staff.id
         self.full_details = data
 
-        # --- EMAIL NOTIFICATION TO STAFF (REAL-TIME ON ISSUE RESOLVED) ---
-        # Send an email to the staff member when the issue is marked as resolved (status 'completed')
+        # --- EMAIL NOTIFICATION TO STAFF AND IT SUPPORT (ON ISSUE RESOLVED) ---
         if hasattr(instance, 'status') and instance.status == 'completed':
             staff_email = instance.submitted_by.email if instance.submitted_by else None
+            it_support_email = getattr(settings, 'IT_SUPPORT_EMAIL', None)
             if staff_email:
                 subject = f"IT Issue Resolution Notification: {instance.issue_title}"
                 message = (
@@ -175,6 +175,7 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
                     f"Thank you for your cooperation.\n\n"
                     f"Best regards,\nIT Support Team\nParamount Bank"
                 )
+                # Send email to staff
                 send_mail(
                     subject,
                     message,
@@ -182,6 +183,15 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
                     [staff_email],
                     fail_silently=True,
                 )
+                # Send the same email to IT support
+                if it_support_email:
+                    send_mail(
+                        subject + f" (Issue reported by paramount staff member: {instance.submitted_by.first_name} {instance.submitted_by.last_name})",
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [it_support_email],
+                        fail_silently=True,
+                    )
 
         # --- REAL-TIME WEBSOCKET NOTIFICATION (ON ISSUE RESOLVED) ---
         # Notify all dashboard clients via WebSocket about the issue resolution
