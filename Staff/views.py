@@ -236,5 +236,52 @@ class UpdateUserCredentialsView(APIView):
         user.save()
         return Response({'message': 'User details updated successfully. If you updated your email, please verify it using the OTP sent to your new email.'}, status=status.HTTP_200_OK)
 
+class ResendOTPView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @swagger_auto_schema(
+        operation_description="Resend a fresh OTP to the user's email.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', example='user@gmail.com'),
+            },
+            required=['email']
+        ),
+        responses={200: 'OTP resent successfully', 404: 'Staff not found'}
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            staff = Staff.objects.get(email=email)
+        except Staff.DoesNotExist:
+            return Response({'error': 'Staff not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Generate a new OTP
+        otp = f"{random.randint(100000, 999999)}"
+        staff.otp = otp
+        staff.otp_created_at = timezone.now()
+        staff.save()
+
+        # Send the new OTP via email
+        html_message = render_to_string('emails/otp_register.html', {
+            'staff': staff,
+            'otp': otp,
+            'year': timezone.now().year
+        })
+        send_mail(
+            'Your New OTP Code',
+            '',
+            settings.DEFAULT_FROM_EMAIL,
+            [staff.email],
+            fail_silently=False,
+            html_message=html_message
+        )
+
+        return Response({'message': 'A new OTP has been sent to your email.'}, status=status.HTTP_200_OK)
+
 # For SSO, Django's authentication system can be integrated with a custom backend if needed.
 # This implementation focuses on OTP-based authentication as requested.
