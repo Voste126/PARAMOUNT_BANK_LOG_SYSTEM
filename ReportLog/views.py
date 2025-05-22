@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from rest_framework.response import Response
 
 class ITIssueListCreateView(generics.ListCreateAPIView):
     serializer_class = ITIssueSerializer
@@ -112,6 +113,12 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
                 }
             }
         )
+
+        # Include the ID of the newly created issue in the response
+        self.response = Response({
+            "id": instance.id,
+            "message": "Issue successfully created."
+        }, status=201)
 
 class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ITIssueSerializer
