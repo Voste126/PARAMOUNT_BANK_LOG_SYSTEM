@@ -29,6 +29,24 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
+    ROLE_CHOICES = [
+        ('User', 'User'),
+        ('Admin', 'Admin'),
+    ]
+    BRANCH_CHOICES = [
+        ('Westlands', 'Westlands branch'),
+        ('Parklands', 'Parklands branch'),
+        ('Koinange', 'Koinange branch'),
+        ('Industrial', 'Industrial area branch'),
+        ('Kisumu', 'Kisumu branch'),
+        ('Mombasa', 'Mombasa branch'),
+        ('Eldoret', 'Eldoret branch'),
+        ('Headquarters', 'Headquarters'),
+    ]
+
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='User')
+    branch = models.CharField(max_length=20, choices=BRANCH_CHOICES, default='Headquarters')
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
@@ -38,6 +56,9 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         domain = getattr(settings, 'STAFF_EMAIL_DOMAIN', '@paramount.co.ke')
         if not self.email.endswith(domain):
             raise ValueError(f'Email must end with {domain}')
+        # Set is_staff to True if role is Admin
+        if self.role == 'Admin':
+            self.is_staff = True
         super().save(*args, **kwargs)
 
     def __str__(self):

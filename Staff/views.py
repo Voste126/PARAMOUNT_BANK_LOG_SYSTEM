@@ -13,6 +13,7 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.template.loader import render_to_string
+from rest_framework.permissions import BasePermission
 
 login_request_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -31,10 +32,34 @@ login_verify_schema = openapi.Schema(
     required=['email', 'otp']
 )
 
+class IsAdminRole(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'Admin'
+
 class StaffRegisterView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    @swagger_auto_schema(request_body=StaffRegisterSerializer, responses={201: StaffSerializer})
+
+    @swagger_auto_schema(
+        operation_description="Register a new staff member.",
+        request_body=StaffRegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="Staff registered successfully.",
+                schema=StaffSerializer()
+            ),
+            400: openapi.Response(
+                description="Validation errors.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, example='Invalid data.')
+                    }
+                )
+            )
+        },
+        tags=["Staff"]
+    )
     def post(self, request):
         serializer = StaffRegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -56,7 +81,9 @@ class StaffRegisterView(APIView):
                 fail_silently=False,
                 html_message=html_message
             )
-            return Response({'message': 'Staff registered. OTP sent to email.'}, status=status.HTTP_201_CREATED)
+            response_data = StaffSerializer(staff).data
+            response_data['message'] = 'An OTP has been sent to your email.'
+            return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OTPVerifyView(APIView):
@@ -147,7 +174,7 @@ class OTPLoginVerifyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class StaffListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminRole, IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Retrieve a list of all staff members.",
@@ -159,6 +186,55 @@ class StaffListView(APIView):
         staff = Staff.objects.all()
         serializer = StaffSerializer(staff, many=True)
         return Response(serializer.data)
+
+class UpdateUserCredentialsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Update user credentials such as name, email, branch, and role. If the email is updated, an OTP will be sent to verify the new email.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'first_name': openapi.Schema(type=openapi.TYPE_STRING, example='John'),
+                'last_name': openapi.Schema(type=openapi.TYPE_STRING, example='Doe'),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', example='john.doe@example.com'),
+                'branch': openapi.Schema(type=openapi.TYPE_STRING, example='Westlands'),
+                'role': openapi.Schema(type=openapi.TYPE_STRING, example='User'),
+            },
+            required=['first_name', 'last_name', 'email']
+        ),
+        responses={200: openapi.Response('User details updated successfully.')},
+        tags=["Staff"]
+    )
+    def put(self, request):
+        user = request.user
+        data = request.data
+        new_email = data.get('email', user.email)
+        if new_email != user.email:
+            otp = f"{random.randint(100000, 999999)}"
+            user.otp = otp
+            user.otp_created_at = timezone.now()
+            user.is_verified = False  # Mark as unverified until OTP is confirmed
+            html_message = render_to_string('emails/otp_register.html', {
+                'staff': user,
+                'otp': otp,
+                'year': timezone.now().year
+            })
+            send_mail(
+                'Verify Your New Email',
+                '',
+                settings.DEFAULT_FROM_EMAIL,
+                [new_email],
+                fail_silently=False,
+                html_message=html_message
+            )
+        user.first_name = data.get('first_name', user.first_name)
+        user.last_name = data.get('last_name', user.last_name)
+        user.email = new_email
+        user.branch = data.get('branch', user.branch)
+        user.role = data.get('role', user.role)
+        user.save()
+        return Response({'message': 'User details updated successfully. If you updated your email, please verify it using the OTP sent to your new email.'}, status=status.HTTP_200_OK)
 
 # For SSO, Django's authentication system can be integrated with a custom backend if needed.
 # This implementation focuses on OTP-based authentication as requested.

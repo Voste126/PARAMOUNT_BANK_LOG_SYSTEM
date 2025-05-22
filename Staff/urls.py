@@ -7,4 +7,5 @@ urlpatterns = [
     path('login/request/', views.OTPLoginRequestView.as_view(), name='otp-login-request'),
     path('login/verify/', views.OTPLoginVerifyView.as_view(), name='otp-login-verify'),
     path('all/', views.StaffListView.as_view(), name='staff-list'),
+    path('update-credentials/', views.UpdateUserCredentialsView.as_view(), name='update-credentials'),
 ]
