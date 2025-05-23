@@ -8,6 +8,7 @@ from django.conf import settings
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
 
 class ITIssueListCreateView(generics.ListCreateAPIView):
     serializer_class = ITIssueSerializer
@@ -27,11 +28,11 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
         except Staff.DoesNotExist:
             from rest_framework.exceptions import NotFound
             raise NotFound(detail="User not found", code="user_not_found")
+        print(f"Authenticated user: {user}")  # Log the authenticated user
         return ITIssue.objects.filter(submitted_by=staff)
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return ITIssueCreateSerializer
+        # Always use ITIssueSerializer for the response to include all fields
         return ITIssueSerializer
 
     def perform_create(self, serializer):
@@ -44,6 +45,11 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
             raise NotFound(detail="User not found", code="user_not_found")
         # Save the new IT issue and associate it with the staff member
         instance = serializer.save(submitted_by=staff)
+
+        # Serialize the instance with ITIssueSerializer to ensure full payload
+        from .serializer import ITIssueSerializer
+        response_serializer = ITIssueSerializer(instance)
+        return Response(response_serializer.data)
 
         # --- EMAIL NOTIFICATION TO STAFF (REAL-TIME ON ISSUE LOGGED) ---
         # Send an email to the staff member confirming the issue was logged
@@ -114,11 +120,23 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
             }
         )
 
-        # Include the ID of the newly created issue in the response
-        self.response = Response({
-            "id": instance.id,
-            "message": "Issue successfully created."
-        }, status=201)
+        # Serialize the full instance of the created issue
+        from .serializer import ITIssueSerializer
+        full_issue_data = ITIssueSerializer(instance).data
+        print("Serialized issue data:", full_issue_data)  # Debug log
+
+        # Debug log to confirm the response data
+        print("Response data being sent:", full_issue_data)  # Debug log
+
+        # Explicitly set the serializer class to ITIssueSerializer to avoid conflicts
+        self.serializer_class = ITIssueSerializer
+
+        # Force serialization of the response using ITIssueSerializer
+        response_data = ITIssueSerializer(instance).data
+        print("Forced serialized response data:", response_data)  # Debug log
+
+        # Return the forced serialized response
+        return Response(response_data, status=201, content_type='application/json')
 
 class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ITIssueSerializer
@@ -160,6 +178,10 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         if instance.submitted_by:
             data['submitted_by'] = staff.id
         self.full_details = data
+
+        # Include the full payload of the newly created issue in the response
+        full_issue_data = ITIssueSerializer(instance).data
+        self.response = Response(full_issue_data, status=200)
 
         # --- EMAIL NOTIFICATION TO STAFF AND IT SUPPORT (ON ISSUE RESOLVED) ---
         if hasattr(instance, 'status') and instance.status == 'completed':
