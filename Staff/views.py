@@ -147,6 +147,7 @@ class OTPLoginRequestView(APIView):
 class OTPLoginVerifyView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+
     @swagger_auto_schema(
         request_body=login_verify_schema,
         responses={200: StaffSerializer}
@@ -164,12 +165,18 @@ class OTPLoginVerifyView(APIView):
                 return Response({'error': 'OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
             staff.otp = None
             staff.save()
+
             # Generate JWT token for the staff
             refresh = RefreshToken.for_user(staff)
+            access_token = refresh.access_token
+
+            # Add the user's role to the access token
+            access_token['role'] = staff.role
+
             return Response({
                 'staff': StaffSerializer(staff).data,
                 'refresh': str(refresh),
-                'access': str(refresh.access_token)
+                'access': str(access_token)
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

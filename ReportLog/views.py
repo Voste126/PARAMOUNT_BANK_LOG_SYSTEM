@@ -9,6 +9,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
+from rest_framework.views import APIView
 
 class ITIssueListCreateView(generics.ListCreateAPIView):
     serializer_class = ITIssueSerializer
@@ -245,6 +246,14 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         if hasattr(self, 'full_details'):
             response.data = self.full_details
         return response
+
+class CategoryChoicesView(APIView):
+    def get(self, request):
+        categories = [
+            {"id": key, "name": value}
+            for key, value in ITIssue.CATEGORY_CHOICES
+        ]
+        return Response(categories)
 
 # ---
 # Comments:
