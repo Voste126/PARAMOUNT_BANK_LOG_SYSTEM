@@ -10,6 +10,8 @@ from channels.layers import get_channel_layer
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 from rest_framework.views import APIView
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class ITIssueListCreateView(generics.ListCreateAPIView):
     serializer_class = ITIssueSerializer
@@ -254,6 +256,50 @@ class CategoryChoicesView(APIView):
             for key, value in ITIssue.CATEGORY_CHOICES
         ]
         return Response(categories)
+
+class StaffUpdateIssueView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Update specific fields of an issue logged by the staff member.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'category': openapi.Schema(type=openapi.TYPE_STRING, description="Category of the issue"),
+                'issue_title': openapi.Schema(type=openapi.TYPE_STRING, description="Title of the issue"),
+                'issue_description': openapi.Schema(type=openapi.TYPE_STRING, description="Description of the issue"),
+                'priority': openapi.Schema(type=openapi.TYPE_STRING, description="Priority of the issue"),
+                'associated_file': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY, description="Associated file for the issue"),
+                'method_of_logging': openapi.Schema(type=openapi.TYPE_STRING, description="Method of logging the issue"),
+            },
+            required=['issue_title'],
+        ),
+        responses={
+            200: openapi.Response(description="Issue updated successfully"),
+            404: openapi.Response(description="Issue not found or you do not have permission to update it"),
+        },
+    )
+    def put(self, request, pk):
+        from Staff.models import Staff
+        try:
+            staff = Staff.objects.get(id=request.user.id)
+        except Staff.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        try:
+            issue = ITIssue.objects.get(id=pk, submitted_by=staff)
+        except ITIssue.DoesNotExist:
+            return Response({"error": "Issue not found or you do not have permission to update it"}, status=404)
+
+        fields = [
+            'category', 'issue_title', 'issue_description', 'priority', 'associated_file', 'method_of_logging'
+        ]
+        for field in fields:
+            if field in request.data:
+                setattr(issue, field, request.data[field])
+
+        issue.save()
+        return Response({"message": "Issue updated successfully"}, status=200)
 
 # ---
 # Comments:
