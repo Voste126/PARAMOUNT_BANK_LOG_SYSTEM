@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django_prometheus',
     'drf_yasg',
     'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
     
     'Staff',
     'ReportLog',

@@ -10,4 +10,5 @@ urlpatterns = [
     path('all/', views.StaffListView.as_view(), name='staff-list'),
     path('update-credentials/', views.UpdateUserCredentialsView.as_view(), name='update-credentials'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
+    path('logout/', views.LogoutView.as_view(), name='logout'),
 ]

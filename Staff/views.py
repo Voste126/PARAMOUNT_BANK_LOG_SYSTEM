@@ -290,5 +290,63 @@ class ResendOTPView(APIView):
 
         return Response({'message': 'A new OTP has been sent to your email.'}, status=status.HTTP_200_OK)
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Logout the user by revoking their JWT tokens.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'refresh_token': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="The refresh token to be revoked.",
+                    example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                )
+            },
+            required=['refresh_token']
+        ),
+        responses={
+            200: openapi.Response(
+                description="Logout successful.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="Logout successful."
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Bad request.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="Refresh token is required."
+                        )
+                    }
+                )
+            )
+        },
+        tags=["Authentication"]
+    )
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh_token')
+            if not refresh_token:
+                return Response({'error': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Revoke the refresh token
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response({'message': 'Logout successful.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 # For SSO, Django's authentication system can be integrated with a custom backend if needed.
 # This implementation focuses on OTP-based authentication as requested.
