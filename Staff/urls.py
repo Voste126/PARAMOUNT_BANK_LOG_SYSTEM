@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import ResendOTPView
+from .views import ResendOTPView, GetUserCredentialsView
 
 urlpatterns = [
     path('register/', views.StaffRegisterView.as_view(), name='staff-register'),
@@ -11,4 +11,5 @@ urlpatterns = [
     path('update-credentials/', views.UpdateUserCredentialsView.as_view(), name='update-credentials'),
     path('resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
+    path('get-user-credentials/<str:user_id>/', GetUserCredentialsView.as_view(), name='get-user-credentials'),
 ]

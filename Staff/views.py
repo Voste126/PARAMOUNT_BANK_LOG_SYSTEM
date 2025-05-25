@@ -14,6 +14,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.template.loader import render_to_string
 from rest_framework.permissions import BasePermission
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import PermissionDenied
 
 login_request_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -348,5 +350,69 @@ class LogoutView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-# For SSO, Django's authentication system can be integrated with a custom backend if needed.
-# This implementation focuses on OTP-based authentication as requested.
+class GetUserCredentialsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Fetch user credentials based on user_id and JWT.",
+        responses={
+            200: openapi.Response(
+                description="User credentials fetched successfully.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_STRING, example='user-1'),
+                        'first_name': openapi.Schema(type=openapi.TYPE_STRING, example='John'),
+                        'last_name': openapi.Schema(type=openapi.TYPE_STRING, example='Doe'),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', example='john.doe@example.com'),
+                        'branch': openapi.Schema(type=openapi.TYPE_STRING, example='Westlands'),
+                        'role': openapi.Schema(type=openapi.TYPE_STRING, example='User'),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Permission denied.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, example='Permission denied.')
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="User not found.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, example='User not found.')
+                    }
+                )
+            )
+        },
+        tags=["Staff"]
+    )
+    def get(self, request, user_id):
+        # Decode the JWT to verify the user
+        jwt_authenticator = JWTAuthentication()
+        try:
+            validated_token = jwt_authenticator.get_validated_token(request.headers.get('Authorization').split()[1])
+            jwt_user_id = validated_token.get('user_id')
+
+            if str(jwt_user_id) != user_id:
+                return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+            try:
+                staff = Staff.objects.get(id=user_id)
+                return Response({
+                    'id': staff.id,
+                    'first_name': staff.first_name,
+                    'last_name': staff.last_name,
+                    'email': staff.email,
+                    'branch': staff.branch,
+                    'role': staff.role,
+                }, status=status.HTTP_200_OK)
+            except Staff.DoesNotExist:
+                return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
