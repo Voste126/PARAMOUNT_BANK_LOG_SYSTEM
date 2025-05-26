@@ -416,3 +416,87 @@ class GetUserCredentialsView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+class AdminUpdateUserCredentialsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @swagger_auto_schema(
+        operation_description="Update user credentials such as name, email, branch, and role by an Admin.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_STRING, example='1'),
+                'first_name': openapi.Schema(type=openapi.TYPE_STRING, example='John'),
+                'last_name': openapi.Schema(type=openapi.TYPE_STRING, example='Doe'),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', example='john.doe@example.com'),
+                'branch': openapi.Schema(type=openapi.TYPE_STRING, example='Westlands'),
+                'role': openapi.Schema(type=openapi.TYPE_STRING, example='User'),
+            },
+            required=['user_id', 'first_name', 'last_name', 'email']
+        ),
+        responses={
+            200: openapi.Response('User details updated successfully.'),
+            404: openapi.Response('User not found.'),
+            403: openapi.Response('Permission denied.')
+        },
+        tags=["Admin"]
+    )
+    def put(self, request):
+        data = request.data
+        user_id = data.get('user_id')
+
+        try:
+            staff = Staff.objects.get(id=user_id)
+            staff.first_name = data.get('first_name', staff.first_name)
+            staff.last_name = data.get('last_name', staff.last_name)
+            staff.email = data.get('email', staff.email)
+            staff.branch = data.get('branch', staff.branch)
+            staff.role = data.get('role', staff.role)
+            staff.save()
+
+            return Response({'message': 'User details updated successfully.'}, status=status.HTTP_200_OK)
+        except Staff.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminGetUserCredentialsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @swagger_auto_schema(
+        operation_description="Fetch user credentials by an Admin based on user_id.",
+        responses={
+            200: openapi.Response(
+                description="User credentials fetched successfully.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_STRING, example='1'),
+                        'first_name': openapi.Schema(type=openapi.TYPE_STRING, example='John'),
+                        'last_name': openapi.Schema(type=openapi.TYPE_STRING, example='Doe'),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING, format='email', example='john.doe@example.com'),
+                        'branch': openapi.Schema(type=openapi.TYPE_STRING, example='Westlands'),
+                        'role': openapi.Schema(type=openapi.TYPE_STRING, example='User'),
+                    }
+                )
+            ),
+            404: openapi.Response('User not found.'),
+            403: openapi.Response('Permission denied.')
+        },
+        tags=["Admin"]
+    )
+    def get(self, request, user_id):
+        try:
+            staff = Staff.objects.get(id=user_id)
+            return Response({
+                'id': staff.id,
+                'first_name': staff.first_name,
+                'last_name': staff.last_name,
+                'email': staff.email,
+                'branch': staff.branch,
+                'role': staff.role,
+            }, status=status.HTTP_200_OK)
+        except Staff.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
