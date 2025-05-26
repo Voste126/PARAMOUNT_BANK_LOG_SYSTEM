@@ -172,6 +172,22 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         # Save & let the serializer set resolution_date if needed
         instance = serializer.save()
 
+        # Debugging: Log the status to ensure it is 'completed'
+        print(f"Debug: Status is {instance.status}")
+
+        # Debugging: Log email sending process
+        if instance.status == 'completed':
+            print("Debug: Status is 'completed', proceeding to send emails.")
+
+            # Email to reporting staff
+            if instance.submitted_by.email:
+                print(f"Debug: Sending email to {instance.submitted_by.email}")
+
+            # Email to IT support
+            it_support = getattr(settings, 'IT_SUPPORT_EMAIL', None)
+            if it_support:
+                print(f"Debug: Sending email to IT support at {it_support}")
+
         # If status just turned to completed, send resolution e-mails
         if instance.status == 'completed':
             # Email to reporting staff
@@ -189,24 +205,33 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
                     f"Recommendation:\n{instance.recommendation or 'N/A'}\n\n"
                     f"Best regards,\nIT Support Team"
                 )
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [instance.submitted_by.email],
-                    fail_silently=False
-                )
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [instance.submitted_by.email],
+                        fail_silently=False
+                    )
+                except Exception as e:
+                    print(f"Error sending email to reporting staff: {e}")
 
             # Email to IT support
             it_support = getattr(settings, 'IT_SUPPORT_EMAIL', None)
             if it_support:
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [it_support],
-                    fail_silently=False
-                )
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [it_support],
+                        fail_silently=False
+                    )
+                except Exception as e:
+                    print(f"Error sending email to IT support: {e}")
+
+        # Log the status field value from the PUT request payload
+        print(f"Debug: Received status value: {serializer.validated_data.get('status')}")
 
         # stash the full serialized data for `update()` to return
         self.full_details = ITIssueSerializer(instance).data
