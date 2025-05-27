@@ -248,6 +248,7 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class CategoryChoicesView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
+    serializer_class   = None  # Added serializer_class for schema generation
 
     def get(self, request):
         choices = [
@@ -262,6 +263,7 @@ class StaffUpdateIssueView(generics.UpdateAPIView):
     parser_classes     = [MultiPartParser, FormParser, JSONParser]
     lookup_url_kwarg   = 'pk'
     serializer_class   = ITIssuePatchSerializer
+    queryset           = ITIssue.objects.all()  # Added queryset for schema generation
 
     @swagger_auto_schema(
         operation_description="Update specific non‐status fields of an existing issue",
