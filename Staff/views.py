@@ -417,6 +417,59 @@ class GetUserCredentialsView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
 
+class AdminCreateUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @swagger_auto_schema(
+        operation_description="Create a new user or admin.",
+        request_body=StaffRegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="User created successfully.",
+                schema=StaffSerializer()
+            ),
+            400: openapi.Response(
+                description="Validation errors.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, example='Invalid data.')
+                    }
+                )
+            )
+        },
+        tags=["Admin"]
+    )
+    def post(self, request):
+        serializer = StaffRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            staff = serializer.save()
+            otp = f"{random.randint(100000, 999999)}"
+            staff.otp = otp
+            staff.otp_created_at = timezone.now()
+            staff.save()
+
+            html_message = render_to_string('emails/onboarding_email.html', {
+                'staff': staff,
+                'otp': otp,
+                'website_link': settings.WEBSITE_LINK
+            })
+            try:
+                send_mail(
+                    'Welcome to Paramount Bank',
+                    '',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [staff.email],
+                    fail_silently=False,
+                    html_message=html_message
+                )
+                print("Email sent successfully to:", staff.email)
+            except Exception as e:
+                print("Failed to send email:", e)
+
+            return Response(StaffSerializer(staff).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class AdminUpdateUserCredentialsView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
@@ -453,6 +506,25 @@ class AdminUpdateUserCredentialsView(APIView):
             staff.branch = data.get('branch', staff.branch)
             staff.role = data.get('role', staff.role)
             staff.save()
+
+            otp = f"{random.randint(100000, 999999)}"
+            staff.otp = otp
+            staff.otp_created_at = timezone.now()
+            staff.save()
+
+            html_message = render_to_string('emails/onboarding_email.html', {
+                'staff': staff,
+                'otp': otp,
+                'website_link': settings.WEBSITE_LINK
+            })
+            send_mail(
+                'Welcome to Paramount Bank',
+                '',
+                settings.DEFAULT_FROM_EMAIL,
+                [staff.email],
+                fail_silently=False,
+                html_message=html_message
+            )
 
             return Response({'message': 'User details updated successfully.'}, status=status.HTTP_200_OK)
         except Staff.DoesNotExist:
@@ -500,3 +572,59 @@ class AdminGetUserCredentialsView(APIView):
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminDeleteUserView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    authentication_classes = [JWTAuthentication]
+
+    @swagger_auto_schema(
+        operation_description="Delete a user by user_id.",
+        responses={
+            200: openapi.Response(
+                description="User deleted successfully.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="User deleted successfully."
+                        )
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="User not found.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="User not found."
+                        )
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Permission denied.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="Permission denied."
+                        )
+                    }
+                )
+            )
+        },
+        tags=["Admin"]
+    )
+    def delete(self, request, user_id):
+        try:
+            user = Staff.objects.get(id=user_id)
+            user.delete()
+            return Response({"message": "User deleted successfully."}, status=status.HTTP_200_OK)
+        except Staff.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

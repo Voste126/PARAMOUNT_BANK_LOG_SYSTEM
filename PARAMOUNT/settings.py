@@ -159,6 +159,9 @@ EMAIL_USE_TLS = True
 STAFF_EMAIL_DOMAIN = os.getenv('STAFF_EMAIL_DOMAIN', '@paramount.co.ke')
 IT_SUPPORT_EMAIL = os.getenv('IT_SUPPORT_EMAIL', 'steveaustine126@gmail.com')
 
+# Add the website link for onboarding emails
+WEBSITE_LINK = os.getenv('WEBSITE_LINK', 'https://www.paramountbank.com')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

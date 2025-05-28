@@ -30,6 +30,7 @@ from asgiref.sync               import async_to_sync
 from channels.layers            import get_channel_layer
 from drf_yasg.utils             import swagger_auto_schema
 from drf_yasg                   import openapi
+from rest_framework             import serializers
 
 from .models     import ITIssue
 from .serializer import (
@@ -246,9 +247,13 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return super().destroy(request, *args, **kwargs)
 
 
+class CategoryChoicesSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
 class CategoryChoicesView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
-    serializer_class   = None  # Added serializer_class for schema generation
+    serializer_class   = CategoryChoicesSerializer  # Added serializer_class for schema generation
 
     def get(self, request):
         choices = [

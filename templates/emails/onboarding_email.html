@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to Paramount Bank</title>
+</head>
+<body>
+    <h1>Welcome {{ staff.first_name }} {{ staff.last_name }}!</h1>
+    <p>We are excited to have you onboard as a {{ staff.role }} at Paramount Bank.</p>
+    <p>Your login OTP is: <strong>{{ otp }}</strong></p>
+    <p>This OTP is valid for 24 hours.</p>
+    <p>Click <a href="{{ website_link }}">here</a> to access your account.</p>
+    <p>Best regards,<br>Paramount Bank Team</p>
+</body>
+</html>
