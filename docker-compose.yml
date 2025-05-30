@@ -1,0 +1,8 @@
+services:
+  paramountbanklogsystem:
+    image: paramountbanklogsystem
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 8000:8000
