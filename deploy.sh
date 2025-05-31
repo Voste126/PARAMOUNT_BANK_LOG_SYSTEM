@@ -38,9 +38,28 @@ export API_BASE_URL
 # Add API_BASE_URL to .env file in paramount-it-log-system
 echo "VITE_API_BASE_URL=$API_BASE_URL" > /home/steve/PARAMOUNT/PARAMOUNT_BANK_LOG_SYSTEM/paramount-it-log-system/.env
 
+# Ensure sensitive environment variables are not echoed or logged
+set +x
+
+# Validate environment variables before exporting
+if [[ -z "$EMAIL_HOST" || -z "$EMAIL_HOST_USER" || -z "$EMAIL_HOST_PASSWORD" || -z "$STAFF_EMAIL_DOMAIN" || -z "$IT_SUPPORT_EMAIL" || -z "$WEBSITE_LINK" || -z "$API_BASE_URL" ]]; then
+  echo "Error: Missing required environment variables." >&2
+  exit 1
+fi
+
+# Secure permissions for .env file
+chmod 600 /home/steve/PARAMOUNT/PARAMOUNT_BANK_LOG_SYSTEM/paramount-it-log-system/.env
+
 # Frontend Deployment
 echo "Setting up frontend..."
 cd /home/steve/PARAMOUNT/PARAMOUNT_BANK_LOG_SYSTEM/paramount-it-log-system
+
+# Ensure npm install and build commands are run with non-root user
+if [[ "$EUID" -eq 0 ]]; then
+  echo "Error: Do not run npm commands as root." >&2
+  exit 1
+fi
+
 npm install
 npm run build
 npx serve -s dist -l 8080 &

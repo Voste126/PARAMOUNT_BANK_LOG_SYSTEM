@@ -25,12 +25,12 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^i@r324!^c9q2k7($vdx!)^zu+^+wj43$ljylj7=9c#f5we@1o'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-^i@r324!^c9q2k7($vdx!)^zu+^+wj43$ljylj7=9c#f5we@1o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ['true', '1']
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')
 
 
 # Application definition
@@ -207,3 +207,12 @@ CHANNEL_LAYERS = {
 SWAGGER_USE_COMPAT_RENDERERS = False
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+# Security settings
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() in ['true', '1']
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = 'DENY'
