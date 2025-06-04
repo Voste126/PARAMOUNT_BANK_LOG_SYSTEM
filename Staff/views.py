@@ -16,6 +16,7 @@ from django.template.loader import render_to_string
 from rest_framework.permissions import BasePermission
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import PermissionDenied
+from uuid import UUID
 
 login_request_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
@@ -392,19 +393,23 @@ class GetUserCredentialsView(APIView):
         tags=["Staff"]
     )
     def get(self, request, user_id):
-        # Decode the JWT to verify the user
+        try:
+            user_id = UUID(user_id)  # Ensure user_id is a valid UUID
+        except ValueError:
+            return Response({'error': 'Invalid user ID format.'}, status=status.HTTP_400_BAD_REQUEST)
+
         jwt_authenticator = JWTAuthentication()
         try:
             validated_token = jwt_authenticator.get_validated_token(request.headers.get('Authorization').split()[1])
             jwt_user_id = validated_token.get('user_id')
 
-            if str(jwt_user_id) != user_id:
+            if str(jwt_user_id) != str(user_id):
                 return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 
             try:
                 staff = Staff.objects.get(id=user_id)
                 return Response({
-                    'id': staff.id,
+                    'id': str(staff.id),
                     'first_name': staff.first_name,
                     'last_name': staff.last_name,
                     'email': staff.email,
@@ -559,9 +564,14 @@ class AdminGetUserCredentialsView(APIView):
     )
     def get(self, request, user_id):
         try:
+            user_id = UUID(user_id)  # Ensure user_id is a valid UUID
+        except ValueError:
+            return Response({'error': 'Invalid user ID format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
             staff = Staff.objects.get(id=user_id)
             return Response({
-                'id': staff.id,
+                'id': str(staff.id),
                 'first_name': staff.first_name,
                 'last_name': staff.last_name,
                 'email': staff.email,
@@ -620,6 +630,11 @@ class AdminDeleteUserView(APIView):
         tags=["Admin"]
     )
     def delete(self, request, user_id):
+        try:
+            user_id = UUID(user_id)  # Ensure user_id is a valid UUID
+        except ValueError:
+            return Response({'error': 'Invalid user ID format.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             user = Staff.objects.get(id=user_id)
             user.delete()

@@ -248,7 +248,7 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CategoryChoicesSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+    id = serializers.UUIDField()
     name = serializers.CharField()
 
 class CategoryChoicesView(generics.GenericAPIView):

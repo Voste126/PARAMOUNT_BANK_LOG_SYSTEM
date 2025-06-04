@@ -13,7 +13,7 @@ urlpatterns = [
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('get-user-credentials/<str:user_id>/', GetUserCredentialsView.as_view(), name='get-user-credentials'),
     path('admin/update-user/', AdminUpdateUserCredentialsView.as_view(), name='admin-update-user'),
-    path('admin/get-user-credentials/<int:user_id>/', AdminGetUserCredentialsView.as_view(), name='admin-get-user-credentials'),
+    path('admin/get-user-credentials/<uuid:user_id>/', AdminGetUserCredentialsView.as_view(), name='admin-get-user-credentials'),
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin-create-user'),
-    path('admin/delete-user/<int:user_id>/', views.AdminDeleteUserView.as_view(), name='admin-delete-user'),
+    path('admin/delete-user/<uuid:user_id>/', views.AdminDeleteUserView.as_view(), name='admin-delete-user'),
 ]

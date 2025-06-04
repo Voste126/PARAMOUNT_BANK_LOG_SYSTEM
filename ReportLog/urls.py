@@ -3,7 +3,7 @@ from .views import ITIssueListCreateView, ITIssueRetrieveUpdateDestroyView, Cate
 
 urlpatterns = [
     path('issues/', ITIssueListCreateView.as_view(), name='issue-list-create'),
-    path('issues/<int:pk>/', ITIssueRetrieveUpdateDestroyView.as_view(), name='issue-detail'),
+    path('issues/<uuid:pk>/', ITIssueRetrieveUpdateDestroyView.as_view(), name='issue-detail'),
     path('categories/', CategoryChoicesView.as_view(), name='category-choices'),
-    path('issues/<int:pk>/update/', StaffUpdateIssueView.as_view(), name='staff-update-issue'),
+    path('issues/<uuid:pk>/update/', StaffUpdateIssueView.as_view(), name='staff-update-issue'),
 ]

@@ -1,7 +1,10 @@
 from django.db import models
 from Staff.models import Staff
+import uuid
 
 class ITIssue(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     PRIORITY_CHOICES = [
         ('Critical', 'Critical'),
         ('High', 'High'),
@@ -17,7 +20,7 @@ class ITIssue(models.Model):
         ('unresolved', 'Unresolved'),
     ]
     METHOD_CHOICES = [
-        ('gmail', 'Gmail'),
+        ('email', 'Email'),
         ('call', 'Call'),
     ]
     CATEGORY_CHOICES = [
