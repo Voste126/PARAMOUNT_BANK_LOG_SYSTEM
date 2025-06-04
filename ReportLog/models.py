@@ -14,6 +14,7 @@ class ITIssue(models.Model):
         ('duplicate', 'Duplicate'),
         ('follow-up', 'Follow Up'),
         ('completed', 'Completed'),
+        ('unresolved', 'Unresolved'),
     ]
     METHOD_CHOICES = [
         ('gmail', 'Gmail'),

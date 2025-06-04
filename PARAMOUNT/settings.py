@@ -138,6 +138,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Email settings for OTP
 # DEFAULT_FROM_EMAIL = 'noreply@paramount.com'
@@ -208,6 +209,15 @@ CHANNEL_LAYERS = {
 SWAGGER_USE_COMPAT_RENDERERS = False
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Replace with your frontend's URL
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8080",  # Local network access
+    "http://192.168.8.101:8080",  # Network access
+    "http://172.20.0.1:8080",  # Network access
+]
 
 
 # Security settings
