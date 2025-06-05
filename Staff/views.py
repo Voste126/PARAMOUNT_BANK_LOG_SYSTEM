@@ -631,7 +631,7 @@ class AdminDeleteUserView(APIView):
     )
     def delete(self, request, user_id):
         try:
-            user_id = UUID(user_id)  # Ensure user_id is a valid UUID
+            user_id = UUID(str(user_id))  # Ensure user_id is a valid UUID
         except ValueError:
             return Response({'error': 'Invalid user ID format.'}, status=status.HTTP_400_BAD_REQUEST)
 
