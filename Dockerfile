@@ -1,25 +1,37 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3-slim
- 
-EXPOSE 8000
+FROM python:3.11-slim
 
-# Keeps Python from generating .pyc files in the container
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Turns off buffering for easier container logging
-ENV PYTHONUNBUFFERED=1
-
-# Install pip requirements
-COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      python3-dev \
+      python3-gi \
+      pkg-config \
+      libcairo2-dev \
+      libdbus-1-dev \
+      libdbus-glib-1-dev \
+      gettext \
+      meson \
+      ninja-build \
+      gobject-introspection \
+      libgirepository1.0-dev \
+      libglib2.0-dev \
+      libffi-dev \
+ && ln -s /usr/lib/x86_64-linux-gnu/pkgconfig/girepository-1.0.pc \
+         /usr/lib/x86_64-linux-gnu/pkgconfig/girepository-2.0.pc \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . /app
+COPY requirements.txt .
+RUN python -m pip install --upgrade pip \
+ && python -m pip install -r requirements.txt
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
-# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+COPY . .
+RUN adduser --disabled-password --gecos "" appuser \
+ && chown -R appuser /app
 USER appuser
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "PARAMOUNT.wsgi"]
+EXPOSE 8000
+CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 PARAMOUNT.wsgi"]
