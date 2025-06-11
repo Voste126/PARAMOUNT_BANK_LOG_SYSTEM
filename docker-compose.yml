@@ -1,11 +1,3 @@
-# services:
-#   paramountbanklogsystem:
-#     image: paramountbanklogsystem
-#     build:
-#       context: .
-#       dockerfile: ./Dockerfile
-#     ports:
-#       - 8000:8000
 version: '3.8'
 
 services:
@@ -35,7 +27,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5433:5433"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
