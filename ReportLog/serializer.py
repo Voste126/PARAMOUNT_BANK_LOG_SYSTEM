@@ -3,6 +3,27 @@ from django.utils import timezone
 from .models import ITIssue
 
 class ITIssueSerializer(serializers.ModelSerializer):
+    """
+    Serializer for reading ITIssue records.
+
+    Provides a complete representation of an IT issue, including all details and
+    read-only fields. Used for GET/list/detail endpoints.
+
+    Fields:
+        id (UUID): Unique identifier for the issue (read-only)
+        category (str): Category of the IT issue
+        issue_title (str): Title of the issue
+        issue_description (str): Detailed description
+        priority (str): Priority level
+        status (str): Current status (read-only)
+        date_logged (datetime): When the issue was reported (read-only)
+        associated_file (file): Optional file attachment
+        resolution_date (datetime): When the issue was resolved (read-only)
+        work_done (str): Actions taken (read-only)
+        recommendation (str): Recommendations (read-only)
+        method_of_logging (str): How the issue was reported
+        submitted_by (UUID): Staff member who submitted the issue (read-only)
+    """
     submitted_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -20,6 +41,20 @@ class ITIssueSerializer(serializers.ModelSerializer):
 
 
 class ITIssueCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating new ITIssue records.
+
+    Used for POST endpoints to create a new IT issue. Only allows fields that
+    should be set by the user at creation time.
+
+    Fields:
+        category (str): Category of the IT issue
+        issue_title (str): Title of the issue
+        issue_description (str): Detailed description
+        priority (str): Priority level
+        associated_file (file, optional): Optional file attachment
+        method_of_logging (str): How the issue was reported
+    """
     associated_file = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
@@ -36,6 +71,20 @@ class ITIssueCreateSerializer(serializers.ModelSerializer):
 
 
 class ITIssuePatchSerializer(serializers.ModelSerializer):
+    """
+    Serializer for partial updates (PATCH) to ITIssue records.
+
+    Allows staff to update only certain fields of an existing issue, such as
+    category, title, description, priority, file, or method of logging.
+
+    Fields:
+        category (str): Category of the IT issue
+        issue_title (str): Title of the issue
+        issue_description (str): Detailed description
+        priority (str): Priority level
+        associated_file (file, optional): Optional file attachment
+        method_of_logging (str): How the issue was reported
+    """
     associated_file = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
@@ -52,6 +101,22 @@ class ITIssuePatchSerializer(serializers.ModelSerializer):
 
 
 class ITIssueUpdateStatusSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating the status, work_done, and recommendation fields of an ITIssue.
+
+    Used by privileged users or automated processes to update the status of an issue,
+    add work notes, or provide recommendations. Handles automatic setting of
+    resolution_date when status is set to 'completed'.
+
+    Fields:
+        status (str): New status for the issue
+        work_done (str): Description of work performed
+        recommendation (str): Recommendations for future prevention
+    
+    Special Logic:
+        - Sets resolution_date if status is changed to 'completed' and not already set
+        - Allows context injection of assigned_to and submitted_by for advanced workflows
+    """
     class Meta:
         model = ITIssue
         fields = [
