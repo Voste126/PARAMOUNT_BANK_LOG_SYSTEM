@@ -43,10 +43,22 @@ from Staff.models import Staff
 
 
 class ITIssueListCreateView(generics.ListCreateAPIView):
+    """
+    API endpoint for listing and creating IT issues for the authenticated staff user.
+
+    - GET: Returns a list of all IT issues submitted by the current user.
+    - POST: Allows the user to log a new IT issue. Sends email and WebSocket notifications on creation.
+    - Only authenticated users can access this endpoint.
+    - Uses different serializers for read and create operations.
+    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
+        """
+        Returns IT issues submitted by the current authenticated staff user.
+        Raises NotAuthenticated if user is not logged in.
+        """
         # Short-circuit for schema generation (Swagger/OpenAPI)
         if getattr(self, 'swagger_fake_view', False):
             return ITIssue.objects.none()
@@ -63,12 +75,25 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
         return ITIssue.objects.filter(submitted_by=staff)
 
     def get_serializer_class(self):
+        """
+        Returns the appropriate serializer class based on the request method.
+        - POST: ITIssueCreateSerializer
+        - GET: ITIssueSerializer
+        """
         # Use create-only serializer for POST, full serializer otherwise
         if self.request.method == 'POST':
             return ITIssueCreateSerializer
         return ITIssueSerializer
 
     def create(self, request, *args, **kwargs):
+        """
+        Handles creation of a new IT issue:
+        - Validates and saves the issue
+        - Sends acknowledgement email to the reporting staff
+        - Notifies IT support via email
+        - Pushes a real-time WebSocket notification to dashboard users
+        - Returns the full issue payload using the read serializer
+        """
         # 1) Validate & save with the create-only serializer
         create_ser = self.get_serializer(data=request.data)
         create_ser.is_valid(raise_exception=True)
@@ -141,10 +166,23 @@ class ITIssueListCreateView(generics.ListCreateAPIView):
 
 
 class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint for retrieving, updating, or deleting a specific IT issue.
+
+    - GET: Retrieve details of a specific issue (must be submitted by the current user)
+    - PUT/PATCH: Update the status, work_done, or recommendation fields (uses ITIssueUpdateStatusSerializer)
+    - DELETE: Remove the issue (if permitted)
+    - Only authenticated users can access this endpoint.
+    - Sends resolution emails and notifications when status is set to 'completed'.
+    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
+        """
+        Returns IT issues submitted by the current authenticated staff user.
+        Raises NotAuthenticated if user is not logged in.
+        """
         # Short-circuit for schema generation (Swagger/OpenAPI)
         if getattr(self, 'swagger_fake_view', False):
             return ITIssue.objects.none()
@@ -160,12 +198,24 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return ITIssue.objects.filter(submitted_by=staff)
 
     def get_serializer_class(self):
+        """
+        Returns the appropriate serializer class based on the request method.
+        - PUT/PATCH: ITIssueUpdateStatusSerializer
+        - GET: ITIssueSerializer
+        """
         # Use status-update serializer for PUT/PATCH, full serializer otherwise
         if self.request.method in ['PUT', 'PATCH']:
             return ITIssueUpdateStatusSerializer
         return ITIssueSerializer
 
     def perform_update(self, serializer):
+        """
+        Handles updating an IT issue:
+        - Ensures submitted_by remains the current user
+        - Saves the instance and triggers resolution logic if status is 'completed'
+        - Sends resolution emails to staff and IT support
+        - Stores the full serialized data for the response
+        """
         # Ensure submitted_by stays with the same staff
         staff = Staff.objects.get(id=self.request.user.id)
         serializer.instance.submitted_by = staff
@@ -238,24 +288,44 @@ class ITIssueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         self.full_details = ITIssueSerializer(instance).data
 
     def update(self, request, *args, **kwargs):
+        """
+        Runs perform_update and returns the full serialized issue payload.
+        """
         # run perform_update, then return the full payload
         super().update(request, *args, **kwargs)
         return Response(self.full_details, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
+        """
+        Deletes the specified IT issue. Can be extended to send notifications on delete.
+        """
         # Optionally you could notify on delete, etc.
         return super().destroy(request, *args, **kwargs)
 
 
 class CategoryChoicesSerializer(serializers.Serializer):
+    """
+    Serializer for representing IT issue category choices in the API.
+    Fields:
+        id (str): Category key
+        name (str): Human-readable category name
+    """
     id = serializers.UUIDField()
     name = serializers.CharField()
 
 class CategoryChoicesView(generics.GenericAPIView):
+    """
+    API endpoint for retrieving available IT issue categories.
+    - GET: Returns a list of all possible categories for IT issues.
+    - No authentication required.
+    """
     permission_classes = [permissions.AllowAny]
     serializer_class   = CategoryChoicesSerializer  # Added serializer_class for schema generation
 
     def get(self, request):
+        """
+        Returns a list of all IT issue categories as id/name pairs.
+        """
         choices = [
             {"id": key, "name": value}
             for key, value in ITIssue.CATEGORY_CHOICES
@@ -264,6 +334,12 @@ class CategoryChoicesView(generics.GenericAPIView):
 
 
 class StaffUpdateIssueView(generics.UpdateAPIView):
+    """
+    API endpoint for staff to update non-status fields of their own IT issues.
+    - PUT: Allows staff to update fields like category, title, description, priority, file, or method_of_logging.
+    - Only the staff member who submitted the issue can update it.
+    - Only authenticated users can access this endpoint.
+    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes     = [MultiPartParser, FormParser, JSONParser]
     lookup_url_kwarg   = 'pk'
@@ -290,6 +366,10 @@ class StaffUpdateIssueView(generics.UpdateAPIView):
         }
     )
     def put(self, request, *args, **kwargs):
+        """
+        Updates allowed fields of an IT issue if the current user is the submitter.
+        Returns 404 if the user or issue is not found or permission is denied.
+        """
         # ensure the staff only updates their own issues
         try:
             staff = Staff.objects.get(id=request.user.id)
