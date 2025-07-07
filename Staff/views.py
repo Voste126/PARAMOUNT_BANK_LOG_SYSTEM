@@ -1,3 +1,18 @@
+"""
+Staff Views
+-----------
+This module contains API views for staff registration, authentication, OTP verification, login, user management, and admin operations.
+
+Endpoints include:
+- Staff registration and OTP verification
+- OTP-based login and verification
+- Staff listing and credential management
+- Admin user management (create, update, fetch, delete)
+- JWT-based authentication and logout
+
+All endpoints are documented with drf-yasg for Swagger/OpenAPI support.
+"""
+
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -36,10 +51,17 @@ login_verify_schema = openapi.Schema(
 )
 
 class IsAdminRole(BasePermission):
+    """
+    Custom permission to allow only users with the 'Admin' role.
+    """
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'Admin'
 
 class StaffRegisterView(APIView):
+    """
+    Register a new staff member. Sends an OTP to the provided email for verification.
+    POST: Register staff and send OTP.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
 
@@ -90,6 +112,10 @@ class StaffRegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OTPVerifyView(APIView):
+    """
+    Verify the OTP sent to a staff member's email during registration.
+    POST: Verify OTP and activate staff account.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
     @swagger_auto_schema(request_body=OTPVerifySerializer, responses={200: 'Verified'})
@@ -112,6 +138,10 @@ class OTPVerifyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OTPLoginRequestView(APIView):
+    """
+    Request an OTP for login. Sends an OTP to the staff's email if verified.
+    POST: Send login OTP to email.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
     @swagger_auto_schema(
@@ -148,6 +178,10 @@ class OTPLoginRequestView(APIView):
         return Response({'message': 'OTP sent to email.'}, status=status.HTTP_200_OK)
 
 class OTPLoginVerifyView(APIView):
+    """
+    Verify OTP for login and return JWT tokens if successful.
+    POST: Verify login OTP and return tokens.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
 
@@ -184,6 +218,10 @@ class OTPLoginVerifyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class StaffListView(APIView):
+    """
+    List all staff members. Admin only.
+    GET: Retrieve all staff users.
+    """
     permission_classes = [IsAdminRole, IsAuthenticated]
 
     @swagger_auto_schema(
@@ -198,6 +236,10 @@ class StaffListView(APIView):
         return Response(serializer.data)
 
 class UpdateUserCredentialsView(APIView):
+    """
+    Update the authenticated user's credentials (name, email, branch, role).
+    PUT: Update user details. Sends OTP if email is changed.
+    """
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -247,6 +289,10 @@ class UpdateUserCredentialsView(APIView):
         return Response({'message': 'User details updated successfully. If you updated your email, please verify it using the OTP sent to your new email.'}, status=status.HTTP_200_OK)
 
 class ResendOTPView(APIView):
+    """
+    Resend a new OTP to the user's email for verification.
+    POST: Resend OTP to email.
+    """
     permission_classes = [AllowAny]
     authentication_classes = []
 
@@ -294,6 +340,10 @@ class ResendOTPView(APIView):
         return Response({'message': 'A new OTP has been sent to your email.'}, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
+    """
+    Logout the user by revoking their JWT refresh token.
+    POST: Revoke refresh token and logout.
+    """
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -352,6 +402,10 @@ class LogoutView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class GetUserCredentialsView(APIView):
+    """
+    Fetch the authenticated user's credentials using user_id and JWT.
+    GET: Retrieve user details if JWT matches user_id.
+    """
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -423,6 +477,10 @@ class GetUserCredentialsView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
 
 class AdminCreateUserView(APIView):
+    """
+    Admin endpoint to create a new user or admin. Sends onboarding email with OTP.
+    POST: Create user/admin and send onboarding email.
+    """
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     @swagger_auto_schema(
@@ -476,6 +534,10 @@ class AdminCreateUserView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AdminUpdateUserCredentialsView(APIView):
+    """
+    Admin endpoint to update user credentials (name, email, branch, role).
+    PUT: Update user details by admin and send onboarding email with OTP.
+    """
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     @swagger_auto_schema(
@@ -538,6 +600,10 @@ class AdminUpdateUserCredentialsView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AdminGetUserCredentialsView(APIView):
+    """
+    Admin endpoint to fetch user credentials by user_id.
+    GET: Retrieve user details by admin.
+    """
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     @swagger_auto_schema(
@@ -584,6 +650,10 @@ class AdminGetUserCredentialsView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AdminDeleteUserView(APIView):
+    """
+    Admin endpoint to delete a user by user_id.
+    DELETE: Remove user from the system.
+    """
     permission_classes = [IsAuthenticated, IsAdminRole]
     authentication_classes = [JWTAuthentication]
 
