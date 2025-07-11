@@ -1,35 +1,58 @@
+# Docker Compose configuration for PARAMOUNT Bank Log System
+# This file defines the multi-container setup for the application,
+# including the Django web application and PostgreSQL database.
+
 version: '3.8'
 
 services:
+  # Main Django application service
   paramountbanklogsystem:
     build:
+      # Build context is the current directory
       context: .
+      # Use the main Dockerfile for building the app
       dockerfile: Dockerfile
     env_file:
+      # Load environment variables from .env file
       - .env
     ports:
+      # Map container port 8000 to host port 8000
       - "8000:8000"
     extra_hosts:
+      # Allow container to access host machine services
+      # Useful for development and debugging
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    # Startup command sequence:
+    # 1. Run database migrations
+    # 2. Collect static files
+    # 3. Start Gunicorn server
     command: >
       sh -c "python manage.py makemigrations &&
             python manage.py migrate &&
             python manage.py collectstatic --noinput &&
             gunicorn PARAMOUNT.wsgi:application --bind 0.0.0.0:8000"
 
-
+  # PostgreSQL Database Service
   db:
+    # Use official PostgreSQL 15 image
     image: postgres:15
     restart: always
     environment:
+      # Database configuration using environment variables
+      # from the .env file
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
+      # Map container port 5433 to host port 5433
       - "5433:5433"
     volumes:
+      # Persist database data using named volume
       - pgdata:/var/lib/postgresql/data
 
+# Named volumes configuration
 volumes:
+  # Volume for persisting PostgreSQL data
+  # This ensures data survives container restarts
   pgdata:
